@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>寶可夢對戰傷害計算教學｜LLM Wiki 知識庫簡報</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .slide-container {
+      height: calc(100vh - 116px);
+    }
+    .slide-card {
+      animation: fadeSlide 0.28s ease-out;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Custom subtle scrollbar inside dense slides */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+  </style>
+</head>
+<body class="flex flex-col h-screen select-none">
+
+  <!-- Top Navigation Bar -->
+  <header class="h-14 bg-slate-900/95 border-b border-slate-800 px-4 md:px-8 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-rose-600 font-black text-white text-sm shadow">P</span>
+      <div>
+        <h1 class="text-sm md:text-base font-bold tracking-wide text-slate-100">寶可夢對戰傷害計算教學</h1>
+        <p class="text-[11px] text-slate-400 hidden sm:block">第九世代《朱／紫》標準回合制規則・基於 LLM Wiki 生成</p>
+      </div>
+    </div>
+
+    <!-- Slide Quick Pills -->
+    <nav id="slide-pills" class="hidden lg:flex items-center gap-1.5"></nav>
+
+    <a href="https://github.com/shenlogan2006-creator/pokemon-battle-llm-wiki" target="_blank" rel="noopener noreferrer"
+       class="inline-flex items-center gap-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 px-3 py-1.5 rounded-lg transition">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      <span>LLM Wiki 知識庫</span>
+    </a>
+  </header>
+
+  <!-- Main Slide Viewport -->
+  <main class="slide-container flex items-center justify-center px-4 md:px-10 py-4 overflow-y-auto">
+    <div id="slide-mount" class="w-full max-w-6xl"></div>
+  </main>
+
+  <!-- Bottom Control & Source Citation Bar -->
+  <footer class="h-[60px] bg-slate-900/95 border-t border-slate-800 px-4 md:px-8 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center gap-2">
+      <button id="btn-prev" onclick="prevSlide()"
+              class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none text-sm font-medium border border-slate-700 transition">
+        ← 上一頁
+      </button>
+      <button id="btn-next" onclick="nextSlide()"
+              class="px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-40 disabled:pointer-events-none text-sm font-bold text-white shadow transition">
+        下一頁 →
+      </button>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="flex items-center gap-3">
+      <div class="w-28 sm:w-48 h-2 bg-slate-800 rounded-full overflow-hidden">
+        <div id="progress-bar" class="h-full bg-gradient-to-r from-rose-500 to-sky-400 transition-all duration-300" style="width: 12.5%"></div>
+      </div>
+      <span id="slide-counter" class="font-mono-code text-xs sm:text-sm text-slate-300 font-semibold">1 / 8</span>
+    </div>
+
+    <!-- Dynamic Wiki Source Badge -->
+    <div id="wiki-source-badge" class="hidden sm:flex items-center gap-2 text-xs"></div>
+  </footer>
+
+  <script>
+    const REPO_BASE = "https://github.com/shenlogan2006-creator/pokemon-battle-llm-wiki/blob/main";
+
+    const slides = [
+      // SLIDE 1: COVER
+      {
+        title: "封面",
+        wikiFile: "README.md",
+        wikiLabel: "README.md（知識庫總覽）",
+        render: () => `
+          <div class="slide-card bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-slate-700/80 rounded-2xl p-8 md:p-12 shadow-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold mb-6">
+              <span>第九世代《寶可夢 朱／紫》Lv.50 標準對戰教學</span>
+            </div>
+            <h2 class="text-3xl md:text-5xl font-black tracking-tight leading-tight text-white mb-4">
+              為什麼劇情能一招秒殺，<br class="hidden sm:inline" />
+              <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400">對戰卻打不動對手？</span>
+            </h2>
+            <p class="text-slate-300 text-base md:text-lg max-w-3xl leading-relaxed mb-8">
+              本簡報完全基於 <code class="font-mono-code text-sky-300 bg-slate-950/70 px-2 py-0.5 rounded">pokemon-battle-llm-wiki</code> 知識庫生成，帶你用 6 個核心模組拆解決定勝負的傷害計算邏輯。
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+              <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+                <div class="text-sky-400 font-bold mb-1">01 傷害總公式</div>
+                <div class="text-slate-400 text-xs">屬修、太晶化、要害與亂數</div>
+              </div>
+              <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+                <div class="text-emerald-400 font-bold mb-1">02 屬性相剋</div>
+                <div class="text-slate-400 text-xs">四倍弱點、四倍抗性與無效</div>
+              </div>
+              <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+                <div class="text-amber-400 font-bold mb-1">03 能力值培育</div>
+                <div class="text-slate-400 text-xs">種族、個體、努力值與速度線</div>
+              </div>
+              <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+                <div class="text-rose-400 font-bold mb-1">04 招式差異</div>
+                <div class="text-slate-400 text-xs">物攻／特攻分類與先制優先度</div>
+              </div>
+              <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+                <div class="text-purple-400 font-bold mb-1">05 場地因素</div>
+                <div class="text-slate-400 text-xs">四大天氣與四大場地（Terrain）</div>
+              </div>
+              <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-xl">
+                <div class="text-cyan-400 font-bold mb-1">06 動態變數</div>
+                <div class="text-slate-400 text-xs">能力升降階級與灼傷／麻痺</div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+
+      // SLIDE 2: DAMAGE FORMULA & BASIC MULTIPLIERS
+      {
+        title: "01 傷害公式",
+        wikiFile: "wiki/01_damage_formula.md",
+        wikiLabel: "wiki/01_damage_formula.md",
+        render: () => `
+          <div class="slide-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-9 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-mono-code uppercase tracking-wider text-sky-400 font-bold">Module 01 · Damage Formula</span>
+              <span class="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md">正式對戰統一為 Lv.50</span>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-2">傷害計算總架構：基礎傷害 × 多重乘區</h2>
+            <p class="text-slate-300 text-sm md:text-base mb-5">劇情模式靠等級輾壓，但正式對戰雙方皆為 50 等，勝負取決於「攻防比」與「各種倍率相乘」。</p>
+
+            <!-- Formula Box -->
+            <div class="bg-slate-950 border border-sky-500/30 rounded-xl p-4 mb-6 font-mono-code text-xs md:text-sm text-sky-200 overflow-x-auto">
+              最終傷害 = ⌊ 基礎傷害(等級50、威力、攻 ÷ 防) × 目標數 × 天氣 × 要害 × 亂數 × 屬修 × 屬性相剋 × 灼傷 ⌋
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-4">
+              <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                <div class="text-amber-400 font-bold text-base mb-1">1. 屬修加成（STAB）</div>
+                <p class="text-xs text-slate-300 leading-relaxed mb-2">使用與自身屬性相同的招式，傷害直接放大：</p>
+                <ul class="text-xs space-y-1 text-slate-200">
+                  <li>• 一般情況：<span class="font-mono-code font-bold text-amber-300">1.5×</span></li>
+                  <li>• 太晶化同屬性：<span class="font-mono-code font-bold text-rose-400">2.0×</span>（第九世代核心）</li>
+                </ul>
+              </div>
+
+              <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                <div class="text-rose-400 font-bold text-base mb-1">2. 擊中要害（Critical）</div>
+                <p class="text-xs text-slate-300 leading-relaxed mb-2">第九世代固定為 <span class="font-mono-code font-bold text-rose-300">1.5×</span>（非舊版 2.0×），且具備破防特性：</p>
+                <p class="text-xs text-slate-400">無視攻方的降攻狀態，也無視守方的升防強化（如鐵壁），但保留攻方自己的升攻強化。</p>
+              </div>
+
+              <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                <div class="text-emerald-400 font-bold text-base mb-1">3. 隨機亂數（Random）</div>
+                <p class="text-xs text-slate-300 leading-relaxed mb-2">每次攻擊從 <span class="font-mono-code font-bold text-emerald-300">0.85 ～ 1.00</span> 抽取 16 檔浮動值：</p>
+                <p class="text-xs text-slate-400">• <strong>確一</strong>：最低亂數 0.85 也能一擊擊倒。<br>• <strong>亂一</strong>：需骰出高亂數才足以擊倒。</p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+
+      // SLIDE 3: TYPE EFFECTIVENESS
+      {
+        title: "02 屬性相剋",
+        wikiFile: "wiki/02_type_effectiveness.md",
+        wikiLabel: "wiki/02_type_effectiveness.md",
+        render: () => `
+          <div class="slide-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-9 shadow-xl">
+            <div class="text-xs font-mono-code uppercase tracking-wider text-emerald-400 font-bold mb-2">Module 02 · Type Effectiveness</div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-2">18 屬性相剋與雙屬性疊加（0× ～ 4×）</h2>
+            <p class="text-slate-300 text-sm mb-5">屬性是影響幅度最劇烈的乘區。當防守方有兩種屬性時，最終倍率為<strong>兩個屬性倍率直接相乘</strong>。</p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+              <!-- Multiplier Table -->
+              <div class="bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full text-left text-xs md:text-sm">
+                  <thead class="bg-slate-800 text-slate-200">
+                    <tr>
+                      <th class="py-2.5 px-3">雙屬性組合</th>
+                      <th class="py-2.5 px-3">最終倍率</th>
+                      <th class="py-2.5 px-3">戰術意義</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800 text-slate-300">
+                    <tr>
+                      <td class="py-2 px-3">2× 與 2×</td>
+                      <td class="py-2 px-3 font-mono-code font-bold text-rose-400">4×（四倍弱點）</td>
+                      <td class="py-2 px-3">極易被秒殺（例：冰打烈咬陸鯊）</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3">2× 與 1×</td>
+                      <td class="py-2 px-3 font-mono-code font-bold text-amber-300">2×（兩倍弱點）</td>
+                      <td class="py-2 px-3">常規進攻突破口</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3">2× 與 0.5×</td>
+                      <td class="py-2 px-3 font-mono-code font-bold text-slate-300">1×（等倍抵銷）</td>
+                      <td class="py-2 px-3">雙屬性互相彌補原本弱點</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3">0.5× 與 0.5×</td>
+                      <td class="py-2 px-3 font-mono-code font-bold text-sky-400">0.25×（四倍抗性）</td>
+                      <td class="py-2 px-3">傷害極低，適合換人聯防吃招</td>
+                    </tr>
+                    <tr>
+                      <td class="py-2 px-3">任意 × 0×</td>
+                      <td class="py-2 px-3 font-mono-code font-bold text-emerald-400">0×（屬性無效）</td>
+                      <td class="py-2 px-3">完全不受傷（例：電打水＋地面）</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- 7 Immunities & Tera Note -->
+              <div class="flex flex-col justify-between gap-4">
+                <div class="bg-slate-800/60 border border-slate-700 rounded-xl p-4">
+                  <h3 class="text-sm font-bold text-emerald-300 mb-2">必背七大「屬性無效（0×）」關係</h3>
+                  <div class="grid grid-cols-2 gap-1.5 text-xs text-slate-200">
+                    <div>• 一般系 ➔ <strong>幽靈系</strong> 無效</div>
+                    <div>• 幽靈系 ➔ <strong>一般系</strong> 無效</div>
+                    <div>• 格鬥系 ➔ <strong>幽靈系</strong> 無效</div>
+                    <div>• 地面系 ➔ <strong>飛行系</strong> 無效</div>
+                    <div>• 電氣系 ➔ <strong>地面系</strong> 無效</div>
+                    <div>• 超能力 ➔ <strong>惡系</strong> 無效</div>
+                    <div>• 毒系 ➔ <strong>鋼系</strong> 無效</div>
+                    <div>• 龍系 ➔ <strong>妖精系</strong> 無效</div>
+                  </div>
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs text-amber-200">
+                  <strong>新手常見誤區（太晶化防禦變化）：</strong><br />
+                  寶可夢太晶化後，<strong>防禦屬性會完全覆蓋為單一的「太晶屬性」</strong>，原本的四倍弱點或雙屬性抗性都會消失！
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+
+      // SLIDE 4: STATS & TRAINING
+      {
+        title: "03 能力值培育",
+        wikiFile: "wiki/03_stats_and_training.md",
+        wikiLabel: "wiki/03_stats_and_training.md",
+        render: () => `
+          <div class="slide-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-9 shadow-xl">
+            <div class="text-xs font-mono-code uppercase tracking-wider text-amber-400 font-bold mb-2">Module 03 · Stats & Training</div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-2">六大能力值與培育四要素</h2>
+            <p class="text-slate-300 text-sm mb-5">HP、攻擊、防禦、特攻、特防決定「輸出與坦度」；<strong>速度（Speed）</strong>則直接決定雙方誰先出手。</p>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+              <div class="bg-slate-800/70 border border-slate-700 p-4 rounded-xl">
+                <div class="text-xs text-slate-400">先天物種差異</div>
+                <div class="text-lg font-black text-white my-1">種族值</div>
+                <p class="text-xs text-slate-300">決定寶可夢定位（如快龍物攻 134、胡地特攻 135）。</p>
+              </div>
+              <div class="bg-slate-800/70 border border-slate-700 p-4 rounded-xl">
+                <div class="text-xs text-slate-400">先天資質 (0～31)</div>
+                <div class="text-lg font-black text-sky-400 my-1">個體值（IV）</div>
+                <p class="text-xs text-slate-300">正式對戰透過王冠特訓將關鍵項升至滿值 <span class="font-mono-code">31</span>（俗稱 V）。</p>
+              </div>
+              <div class="bg-slate-800/70 border border-slate-700 p-4 rounded-xl">
+                <div class="text-xs text-slate-400">後天分配 (上限 510)</div>
+                <div class="text-lg font-black text-emerald-400 my-1">努力值（EV）</div>
+                <p class="text-xs text-slate-300">單項上限 <span class="font-mono-code">252</span>。Lv.50 下最初 4 點 +1 能力，之後每 8 點 +1。</p>
+              </div>
+              <div class="bg-slate-800/70 border border-slate-700 p-4 rounded-xl">
+                <div class="text-xs text-slate-400">性格修正</div>
+                <div class="text-lg font-black text-rose-400 my-1">1.1× / 0.9×</div>
+                <p class="text-xs text-slate-300">強化優勢項、降低無用項（例：爽朗 +速度 -特攻）。</p>
+              </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 text-xs">
+              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                <div class="font-bold text-sky-300 mb-1.5">實戰速度線差距範例（Lv.50 烈咬陸鯊・速度種族值 102）</div>
+                <p class="text-slate-300 leading-relaxed">
+                  • <strong>爽朗性格（速度 1.1×）</strong>、滿努力值 252 ➔ 速度實數值 <span class="font-mono-code text-emerald-400 font-bold">169</span><br />
+                  • <strong>固執性格（速度 1.0×）</strong>、滿努力值 252 ➔ 速度實數值 <span class="font-mono-code text-amber-300 font-bold">154</span><br />
+                  僅僅性格修正就差了 15 點速度，決定內戰誰先出手！
+                </p>
+              </div>
+              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                <div class="font-bold text-amber-300 mb-1.5">新手配置黃金法則：極限二項（252 / 252 / 4）</div>
+                <p class="text-slate-300 leading-relaxed">
+                  因為努力值總上限只有 510，切忌平均分配給六項。新手最穩健的練法是將<strong>兩項核心能力練滿 252</strong>（如速度 252 ＋ 物攻 252），剩餘 4 點分給 HP。
+                </p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+
+      // SLIDE 5: MOVE MECHANICS
+      {
+        title: "04 招式差異",
+        wikiFile: "wiki/04_move_mechanics.md",
+        wikiLabel: "wiki/04_move_mechanics.md",
+        render: () => `
+          <div class="slide-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-9 shadow-xl">
+            <div class="text-xs font-mono-code uppercase tracking-wider text-rose-400 font-bold mb-2">Module 04 · Move Mechanics</div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-2">招式分類、優先度與接觸判定</h2>
+            <p class="text-slate-300 text-sm mb-5">招式不只看威力高低，還必須配合寶可夢的「物攻／特攻專長」以及「優先度（Priority）」。</p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+              <!-- Left: 3 Categories -->
+              <div class="space-y-3">
+                <h3 class="text-sm font-bold text-slate-200">一、招式三大分類與攻防對應</h3>
+                <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3.5 text-xs">
+                  <div class="font-bold text-rose-300 text-sm mb-1">物理招式（Physical）</div>
+                  <p class="text-slate-200">用我方的<strong>「攻擊」</strong>對抗對手的<strong>「防禦」</strong>（例：《近身戰》、《地震》）。</p>
+                </div>
+                <div class="bg-sky-500/10 border border-sky-500/30 rounded-xl p-3.5 text-xs">
+                  <div class="font-bold text-sky-300 text-sm mb-1">特殊招式（Special）</div>
+                  <p class="text-slate-200">用我方的<strong>「特攻」</strong>對抗對手的<strong>「特防」</strong>（例：《十萬伏特》、《暗影球》）。</p>
+                </div>
+                <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-3.5 text-xs">
+                  <div class="font-bold text-slate-200 text-sm mb-1">變化招式（Status）</div>
+                  <p class="text-slate-300">不直接造成傷害，用於強化能力、施加異常或防守（例：《劍舞》、《守住》）。</p>
+                </div>
+                <p class="text-[11px] text-amber-300">※ 注意：「物理招式 ≠ 接觸類招式」，例如《地震》是物理招式但不接觸對手，不會觸發《靜電》或《凸凸頭盔》。</p>
+              </div>
+
+              <!-- Right: Priority Table -->
+              <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+                <h3 class="text-sm font-bold text-amber-300 mb-2">二、優先度機制（高優先度無視速度先出招）</h3>
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-slate-800 text-slate-300">
+                    <tr>
+                      <th class="py-2 px-2.5">優先度</th>
+                      <th class="py-2 px-2.5">代表招式與效果</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800 text-slate-300">
+                    <tr><td class="py-1.5 px-2.5 font-mono-code font-bold text-emerald-400">+4</td><td class="py-1.5 px-2.5">《守住》（完全阻擋當回合對手攻擊）</td></tr>
+                    <tr><td class="py-1.5 px-2.5 font-mono-code font-bold text-emerald-400">+3</td><td class="py-1.5 px-2.5">《擊掌奇襲》（首回合限定，必定使目標畏縮）</td></tr>
+                    <tr><td class="py-1.5 px-2.5 font-mono-code font-bold text-sky-400">+2</td><td class="py-1.5 px-2.5">《神速》（高威力一般系先制攻擊）</td></tr>
+                    <tr><td class="py-1.5 px-2.5 font-mono-code font-bold text-sky-400">+1</td><td class="py-1.5 px-2.5">《子彈拳》、《水流噴射》、《突襲》（殘血收尾）</td></tr>
+                    <tr><td class="py-1.5 px-2.5 font-mono-code text-slate-400">0</td><td class="py-1.5 px-2.5">絕大多數常規招式（此時才比較雙方速度值）</td></tr>
+                    <tr><td class="py-1.5 px-2.5 font-mono-code font-bold text-rose-400">-7</td><td class="py-1.5 px-2.5">《戲法空間》（反轉場上速度順序 5 回合）</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `
+      },
+
+      // SLIDE 6: WEATHER & TERRAIN
+      {
+        title: "05 場地因素",
+        wikiFile: "wiki/05_field_weather_terrain.md",
+        wikiLabel: "wiki/05_field_weather_terrain.md",
+        render: () => `
+          <div class="slide-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-9 shadow-xl">
+            <div class="text-xs font-mono-code uppercase tracking-wider text-purple-400 font-bold mb-2">Module 05 · Weather & Terrain</div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-2">場地因素：四大天氣與四大場地（Terrain）</h2>
+            <p class="text-slate-300 text-sm mb-5">天氣與場地可同時存在（預設 5 回合），能大幅改變特定屬性傷害與防禦能力。</p>
+
+            <div class="grid md:grid-cols-2 gap-5 text-xs">
+              <!-- Weather -->
+              <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+                <h3 class="text-sm font-bold text-amber-300 mb-3">一、四大天氣（對全場生效）</h3>
+                <div class="space-y-2.5">
+                  <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="font-bold text-orange-400">☀ 大晴天：</span>火屬性招式 <strong class="text-white">1.5×</strong>、水屬性招式 <strong class="text-slate-400">0.5×</strong>。
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="font-bold text-sky-400">🌧 下雨天：</span>水屬性招式 <strong class="text-white">1.5×</strong>、火屬性招式 <strong class="text-slate-400">0.5×</strong>；《打雷》《暴風》必中。
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="font-bold text-yellow-500">🌪 沙暴：</span><strong>岩石屬性特防 1.5×</strong>；非岩/地/鋼屬性每回合扣 1/16 HP。
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-cyan-950/40 border border-cyan-500/30">
+                    <span class="font-bold text-cyan-300">❄ 下雪（第 9 世代改動）：</span><strong>冰屬性防禦 1.5×</strong>，且<strong>回合結束不再扣血</strong>！
+                  </div>
+                </div>
+              </div>
+
+              <!-- Terrain -->
+              <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+                <h3 class="text-sm font-bold text-purple-300 mb-3">二、四大場地（僅對「地面上」的寶可夢生效）</h3>
+                <div class="space-y-2.5">
+                  <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="font-bold text-yellow-300">⚡ 電氣場地：</span>電屬性招式 <strong class="text-white">1.3×</strong>；地面目標不會陷入睡眠。
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="font-bold text-emerald-400">🌿 青草場地：</span>草屬性招式 <strong class="text-white">1.3×</strong>；每回合回 1/16 HP，《地震》傷害減半。
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-purple-950/40 border border-purple-500/30">
+                    <span class="font-bold text-purple-300">🔮 精神場地：</span>超能力招式 <strong class="text-white">1.3×</strong>；<strong>完全封鎖對手對地面目標的先制招式</strong>。
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span class="font-bold text-pink-300">🌫 薄霧場地：</span>受龍屬性招式傷害 <strong class="text-white">0.5×</strong>；免疫異常狀態（不加妖精威力）。
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2.5">※ 飛行屬性、特性《飄浮》或攜帶《氣球》處於浮空狀態，不受場地影響。</p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+
+      // SLIDE 7: STAT STAGES & STATUS
+      {
+        title: "06 動態變數",
+        wikiFile: "wiki/06_stat_stages_and_status.md",
+        wikiLabel: "wiki/06_stat_stages_and_status.md",
+        render: () => `
+          <div class="slide-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-9 shadow-xl">
+            <div class="text-xs font-mono-code uppercase tracking-wider text-cyan-400 font-bold mb-2">Module 06 · Stat Stages & Status</div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-2">戰局動態變數：能力升降與異常狀態</h2>
+            <p class="text-slate-300 text-sm mb-5">對戰中的強化招式與異常狀態會即時改寫能力倍率，也是逆轉戰局的關鍵手段。</p>
+
+            <!-- Stat Stages Bar -->
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 mb-5">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <h3 class="text-sm font-bold text-sky-300">一、能力變化等級（-6 階 ～ +6 階，換下場即歸零重置）</h3>
+                <span class="text-xs text-slate-400">常見強化：《劍舞》物攻 +2、《詭計》特攻 +2、《龍之舞》攻速各 +1</span>
+              </div>
+              <div class="grid grid-cols-7 gap-1.5 text-center font-mono-code text-xs">
+                <div class="bg-rose-950/60 border border-rose-800/60 p-2 rounded">
+                  <div class="text-rose-300 font-bold">-2 階</div>
+                  <div class="text-white mt-0.5">0.50×</div>
+                </div>
+                <div class="bg-rose-950/40 border border-rose-800/40 p-2 rounded">
+                  <div class="text-rose-200 font-bold">-1 階</div>
+                  <div class="text-white mt-0.5">0.67×</div>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-2 rounded">
+                  <div class="text-slate-300 font-bold">0 階</div>
+                  <div class="text-white mt-0.5">1.0×</div>
+                </div>
+                <div class="bg-emerald-950/40 border border-emerald-800/40 p-2 rounded">
+                  <div class="text-emerald-300 font-bold">+1 階</div>
+                  <div class="text-white mt-0.5">1.5×</div>
+                </div>
+                <div class="bg-emerald-950/60 border border-emerald-800/60 p-2 rounded">
+                  <div class="text-emerald-300 font-bold">+2 階</div>
+                  <div class="text-white mt-0.5">2.0×</div>
+                </div>
+                <div class="bg-emerald-950/80 border border-emerald-700 p-2 rounded">
+                  <div class="text-emerald-200 font-bold">+4 階</div>
+                  <div class="text-white mt-0.5">3.0×</div>
+                </div>
+                <div class="bg-emerald-900/70 border border-emerald-500 p-2 rounded">
+                  <div class="text-white font-bold">+6 階</div>
+                  <div class="text-amber-300 mt-0.5">4.0×</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status Conditions -->
+            <div class="grid md:grid-cols-3 gap-4 text-xs">
+              <div class="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                <div class="text-orange-400 font-bold text-sm mb-1">🔥 灼傷（Burn）</div>
+                <p class="text-slate-200 leading-relaxed">
+                  <strong>物理招式傷害減半（0.5×）</strong>＋每回合扣 1/16 HP。<br />
+                  <span class="text-amber-300 font-semibold">※ 陷阱：對「特攻手」放鬼火完全不會減少其招式傷害！</span>
+                </p>
+              </div>
+              <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+                <div class="text-yellow-300 font-bold text-sm mb-1">⚡ 麻痺（Paralysis）</div>
+                <p class="text-slate-200 leading-relaxed">
+                  <strong>速度直接減半（0.5×）</strong>＋每回合有 25% 機率無法行動。<br />
+                  <span class="text-slate-400">電屬性寶可夢免疫麻痺。</span>
+                </p>
+              </div>
+              <div class="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                <div class="text-purple-300 font-bold text-sm mb-1">💤 睡眠 / 劇毒 / 冰凍</div>
+                <p class="text-slate-200 leading-relaxed">
+                  • <strong>睡眠</strong>：1～3 回合無法行動。<br />
+                  • <strong>劇毒</strong>：每回合扣血量遞增（N/16 HP）。<br />
+                  • <strong>同一時間只能有一種主要異常狀態</strong>。
+                </p>
+              </div>
+            </div>
+          </div>
+        `
+      },
+
+      // SLIDE 8: INTERACTIVE SIMULATOR & QUIZ
+      {
+        title: "07 實戰演練",
+        wikiFile: "AGENTS.md",
+        wikiLabel: "全知識庫綜合應用（01～06）",
+        render: () => `
+          <div class="slide-card bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl">
+            <div class="text-xs font-mono-code uppercase tracking-wider text-emerald-400 font-bold mb-1">Interactive Lab · 知識檢核</div>
+            <h2 class="text-2xl md:text-3xl font-black text-white mb-4">互動演練：傷害倍率計算器 ＆ 新手隨堂測驗</h2>
+
+            <div class="grid lg:grid-cols-2 gap-6">
+              <!-- Left: Multiplier Calculator -->
+              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4">
+                <h3 class="text-sm font-bold text-sky-300 mb-3">1. 傷害乘區即時試算器</h3>
+                <div class="grid grid-cols-2 gap-3 text-xs mb-4">
+                  <div>
+                    <label class="block text-slate-400 mb-1">屬修 / 太晶化</label>
+                    <select id="calc-stab" onchange="updateCalc()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+                      <option value="1">無屬修 (1.0×)</option>
+                      <option value="1.5" selected>本系屬修 STAB (1.5×)</option>
+                      <option value="2">太晶化同屬性 (2.0×)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">屬性相剋倍率</label>
+                    <select id="calc-type" onchange="updateCalc()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+                      <option value="0">屬性無效 (0×)</option>
+                      <option value="0.25">四倍抗性 (0.25×)</option>
+                      <option value="0.5">兩倍抗性 (0.5×)</option>
+                      <option value="1">一倍等倍 (1.0×)</option>
+                      <option value="2" selected>兩倍弱點 (2.0×)</option>
+                      <option value="4">四倍弱點 (4.0×)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">天氣 / 場地加成</label>
+                    <select id="calc-field" onchange="updateCalc()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+                      <option value="1" selected>無天氣/場地修正 (1.0×)</option>
+                      <option value="1.5">晴天火 / 雨天水 (1.5×)</option>
+                      <option value="1.3">電氣/青草/精神場地 (1.3×)</option>
+                      <option value="0.5">逆天氣/薄霧擋龍 (0.5×)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">異常狀態 / 要害</label>
+                    <select id="calc-status" onchange="updateCalc()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-white">
+                      <option value="1" selected>正常狀態 (1.0×)</option>
+                      <option value="1.5">擊中要害 (1.5×)</option>
+                      <option value="0.5">物攻手陷入灼傷 (0.5×)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="bg-slate-900 border border-sky-500/30 rounded-xl p-3.5 flex items-center justify-between">
+                  <div>
+                    <div class="text-xs text-slate-400">最終綜合傷害倍率</div>
+                    <div id="calc-verdict" class="text-xs text-emerald-400 mt-0.5">極具威脅的克制打擊！</div>
+                  </div>
+                  <div id="calc-result" class="font-mono-code text-2xl font-black text-sky-400">3.00×</div>
+                </div>
+              </div>
+
+              <!-- Right: Quick Quiz -->
+              <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+                <div>
+                  <h3 class="text-sm font-bold text-amber-300 mb-3">2. 第九世代對戰規則快問快答</h3>
+                  <div class="space-y-2.5 text-xs">
+                    <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                      <p class="font-semibold text-slate-200 mb-1.5">Q1：對手是「特攻型」振翼髮，對牠放《鬼火》使其灼傷，牠的《暗影球》傷害會減半嗎？</p>
+                      <div class="flex gap-2">
+                        <button onclick="checkQuiz(1, false, this)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700">會減半</button>
+                        <button onclick="checkQuiz(1, true, this)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700">不會，灼傷只減物理招式</button>
+                      </div>
+                      <p id="quiz-msg-1" class="mt-1.5 hidden font-medium"></p>
+                    </div>
+
+                    <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                      <p class="font-semibold text-slate-200 mb-1.5">Q2：第九世代天氣「下雪」時，場上非冰屬性寶可夢每回合結束會扣血嗎？</p>
+                      <div class="flex gap-2">
+                        <button onclick="checkQuiz(2, false, this)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700">會扣 1/16 HP</button>
+                        <button onclick="checkQuiz(2, true, this)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700">不會扣血，改加冰系防禦 1.5×</button>
+                      </div>
+                      <p id="quiz-msg-2" class="mt-1.5 hidden font-medium"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      }
+    ];
+
+    let currentSlide = 0;
+
+    function renderPills() {
+      const container = document.getElementById("slide-pills");
+      container.innerHTML = slides.map((s, idx) => `
+        <button onclick="goToSlide(${idx})"
+          class="px-2.5 py-1 rounded-md text-xs font-medium transition ${
+            idx === currentSlide
+              ? "bg-sky-600 text-white font-bold shadow"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+          }">
+          ${s.title}
+        </button>
+      `).join("");
+    }
+
+    function renderSlide() {
+      const slide = slides[currentSlide];
+      document.getElementById("slide-mount").innerHTML = slide.render();
+      document.getElementById("slide-counter").textContent = `${currentSlide + 1} / ${slides.length}`;
+      document.getElementById("progress-bar").style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+
+      document.getElementById("btn-prev").disabled = currentSlide === 0;
+      document.getElementById("btn-next").disabled = currentSlide === slides.length - 1;
+
+      document.getElementById("wiki-source-badge").innerHTML = `
+        <span class="text-slate-400">知識來源：</span>
+        <a href="${REPO_BASE}/${slide.wikiFile}" target="_blank" rel="noopener noreferrer"
+           class="font-mono-code text-sky-400 hover:underline bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+          ${slide.wikiLabel} ↗
+        </a>
+      `;
+
+      renderPills();
+      if (currentSlide === slides.length - 1) updateCalc();
+    }
+
+    function nextSlide() {
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        renderSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 0) {
+        currentSlide--;
+        renderSlide();
+      }
+    }
+
+    function goToSlide(index) {
+      currentSlide = index;
+      renderSlide();
+    }
+
+    function updateCalc() {
+      const stab = parseFloat(document.getElementById("calc-stab")?.value || 1.5);
+      const type = parseFloat(document.getElementById("calc-type")?.value || 2);
+      const field = parseFloat(document.getElementById("calc-field")?.value || 1);
+      const status = parseFloat(document.getElementById("calc-status")?.value || 1);
+      const total = stab * type * field * status;
+
+      const resEl = document.getElementById("calc-result");
+      const verdictEl = document.getElementById("calc-verdict");
+      if (!resEl) return;
+
+      resEl.textContent = `${total.toFixed(2)}×`;
+      if (total === 0) {
+        verdictEl.textContent = "完全無效（0 傷害），建議立刻換人或換招！";
+        verdictEl.className = "text-xs text-slate-400 mt-0.5";
+      } else if (total >= 3) {
+        verdictEl.textContent = "毀滅級爆發傷害，極高機率一擊擊倒（確一）！";
+        verdictEl.className = "text-xs text-rose-400 mt-0.5";
+      } else if (total >= 1.5) {
+        verdictEl.textContent = "有效壓制傷害，掌握進攻主動權。";
+        verdictEl.className = "text-xs text-emerald-400 mt-0.5";
+      } else {
+        verdictEl.textContent = "傷害偏低（被抗性或減傷限制），不建議硬拚。";
+        verdictEl.className = "text-xs text-amber-400 mt-0.5";
+      }
+    }
+
+    function checkQuiz(qNum, isCorrect, btn) {
+      const msgEl = document.getElementById(`quiz-msg-${qNum}`);
+      msgEl.classList.remove("hidden");
+      if (isCorrect) {
+        msgEl.textContent = "✔ 正確！完全符合第九世代 LLM Wiki 規則。";
+        msgEl.className = "mt-1.5 text-emerald-400 font-semibold";
+      } else {
+        msgEl.textContent = "✘ 答錯囉！請回顧上一頁的「新手常見誤區」提醒。";
+        msgEl.className = "mt-1.5 text-rose-400 font-semibold";
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        prevSlide();
+      }
+    });
+
+    renderSlide();
+  </script>
+</body>
+</html>
